@@ -5,6 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 //
+// Use the following queries for PostgreSQL,
+// to examine the schema and ensure referential
+// integrity, indexes, and auto-increment values.
+//
+
+//
 // List all foreign keys
 //
 // SELECT conrelid::regclass AS table_name,
@@ -17,10 +23,11 @@ use Illuminate\Support\Facades\Schema;
 //
 
 //
-// List all sequences (auto increment)
+// List all sequences (auto-increment)
 // SELECT c.relname FROM pg_class c WHERE c.relkind = 'S' order BY c.relname;
 //
 
+//
 // List all indexes
 //
 // SELECT tablename, indexname, indexdef
@@ -32,15 +39,18 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration{
   /**
    * Run the migrations.
+   *
+   * NOTE: Even though the default behaviour is `NOT NULL` when defining columns,
+   *       we use `nullable(false)` everywhere, because explicit is better than implicit.
    */
   public function up(): void{
     Schema::create('sms_providers', function (Blueprint $table) {
-      $table->id();
-      $table->string('provider');
-      $table->string('details');
+      $table->id()->nullable(false);
+      $table->string('provider')->nullable(false);
+      $table->string('details')->nullable(false);
       $table->unsignedInteger('sms_max_limit_per_day')->default(0);
-      $table->timestamp('created_at')->useCurrent();
-      $table->timestamp('updated_at')->useCurrent();
+      $table->timestamp('created_at')->useCurrent()->nullable(false);
+      $table->timestamp('updated_at')->useCurrent()->nullable(false);
     });
 
     // Insert default providers
@@ -52,12 +62,12 @@ return new class extends Migration{
     ]);
 
     Schema::create('sms_provider_user', function (Blueprint $table) {
-      $table->id();
-      $table->unsignedBigInteger('sms_provider_id');
-      $table->unsignedBigInteger('user_id');
+      $table->id()->nullable(false);
+      $table->unsignedBigInteger('sms_provider_id')->nullable(false);
+      $table->unsignedBigInteger('user_id')->nullable(false);
       // We can add deifferent limit for each user here
-      $table->timestamp('created_at')->useCurrent();
-      $table->timestamp('updated_at')->useCurrent();
+      $table->timestamp('created_at')->useCurrent()->nullable(false);
+      $table->timestamp('updated_at')->useCurrent()->nullable(false);
 
       $table->unique(['sms_provider_id', 'user_id']);
 
@@ -68,11 +78,11 @@ return new class extends Migration{
     });
 
     Schema::create('message_statuses', function (Blueprint $table) {
-      $table->id();
-      $table->string('status')->unique();
-      $table->longText('description');
-      $table->timestamp('created_at')->useCurrent();
-      $table->timestamp('updated_at')->useCurrent();
+      $table->id()->nullable(false);
+      $table->string('status')->unique()->nullable(false);
+      $table->longText('description')->nullable(false);
+      $table->timestamp('created_at')->useCurrent()->nullable(false);
+      $table->timestamp('updated_at')->useCurrent()->nullable(false);
     });
 
     // Insert default message statues
@@ -96,14 +106,16 @@ return new class extends Migration{
 
     // NOTE: The original technical specification does not explicitly require that messages
     //       belong to users. However it makes sense to add this relation.
+    // TODO: Add the provider id here, according to current user selected provider,
+    //       to know each message, from which provider it was sent.
     Schema::create('messages', function (Blueprint $table) {
-      $table->id();
-      $table->string('message');
-      $table->string('phone_number');
-      $table->unsignedBigInteger('user_id');
-      $table->unsignedBigInteger('message_status_id');
-      $table->timestamp('created_at')->useCurrent();
-      $table->timestamp('updated_at')->useCurrent();
+      $table->id()->nullable(false);
+      $table->string('message')->nullable(false);
+      $table->string('phone_number')->nullable(false);
+      $table->unsignedBigInteger('user_id')->nullable(false);
+      $table->unsignedBigInteger('message_status_id')->nullable(false);
+      $table->timestamp('created_at')->useCurrent()->nullable(false);
+      $table->timestamp('updated_at')->useCurrent()->nullable(false);
 
       $table->index('user_id');
       $table->index('message_status_id');
@@ -112,10 +124,10 @@ return new class extends Migration{
     });
 
     Schema::create('badwords', function (Blueprint $table) {
-      $table->id();
-      $table->string('badword')->unique();
-      $table->timestamp('created_at')->useCurrent();
-      $table->timestamp('updated_at')->useCurrent();
+      $table->id()->nullable(false);
+      $table->string('badword')->unique()->nullable(false);
+      $table->timestamp('created_at')->useCurrent()->nullable(false);
+      $table->timestamp('updated_at')->useCurrent()->nullable(false);
     });
   }
 
