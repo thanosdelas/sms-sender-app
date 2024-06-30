@@ -8,8 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
-{
+class User extends Authenticatable{
   use HasApiTokens, HasFactory, Notifiable;
 
   /**
@@ -43,7 +42,16 @@ class User extends Authenticatable
     'password' => 'hashed',
   ];
 
+  public function defaultSmsProvider(){
+    return $this->belongsTo(SmsProvider::class, 'default_sms_provider_id');
+  }
+
   public function smsProviders(){
-    return $this->belongsToMany(SmsProvider::class);
+    // return $this->belongsToMany(SmsProvider::class);
+    return $this->belongsToMany(SmsProvider::class, 'sms_provider_user', 'user_id', 'sms_provider_id');
+  }
+
+  public function messages(){
+    return $this->hasMany(Message::class);
   }
 }

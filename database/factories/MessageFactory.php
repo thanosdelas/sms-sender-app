@@ -25,4 +25,10 @@ class MessageFactory extends Factory
       'message_status_id' => MessageStatus::where('status', 'delivered')->first(),
     ];
   }
+
+  public function forUser(User $user){
+    return $this->state([
+      'user_id' => $user->id,
+    ]);
+  }
 }
