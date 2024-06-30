@@ -38,9 +38,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration{
   /**
-   * Run the migrations.
+   * Create the database schema, and pre-populate default records.
    *
-   * NOTE: Even though the default behaviour is `NOT NULL` when defining columns,
+   * NOTE: Even though the default behaviour when defining columns is `NOT NULL`,
    *       we use `nullable(false)` everywhere, because explicit is better than implicit.
    */
   public function up(): void{
@@ -59,6 +59,22 @@ return new class extends Migration{
       'provider' => "sms.to",
       'sms_max_limit_per_day' => 1000,
       'details' => "Intergotelecom Platform SMS provider.",
+    ]);
+
+    // Insert default providers
+    DB::table('sms_providers')->insert([
+      'id' => '200',
+      'provider' => "acme-sms-provider.com",
+      'sms_max_limit_per_day' => 999,
+      'details' => "ACME Telecom SMS provider.",
+    ]);
+
+    // Insert default providers
+    DB::table('sms_providers')->insert([
+      'id' => '300',
+      'provider' => "anotherone-sms-provider.com",
+      'sms_max_limit_per_day' => 888,
+      'details' => "Anotherone Telecom SMS provider.",
     ]);
 
     Schema::create('sms_provider_user', function (Blueprint $table) {
@@ -113,13 +129,16 @@ return new class extends Migration{
       $table->string('message')->nullable(false);
       $table->string('phone_number')->nullable(false);
       $table->unsignedBigInteger('user_id')->nullable(false);
+      $table->unsignedBigInteger('sms_provider_id')->nullable(false);
       $table->unsignedBigInteger('message_status_id')->nullable(false);
       $table->timestamp('created_at')->useCurrent()->nullable(false);
       $table->timestamp('updated_at')->useCurrent()->nullable(false);
 
       $table->index('user_id');
+      $table->index('sms_provider_id');
       $table->index('message_status_id');
       $table->foreign('user_id')->references('id')->on('users')->constrained();
+      $table->foreign('sms_provider_id')->references('id')->on('sms_providers')->constrained();
       $table->foreign('message_status_id')->references('id')->on('message_statuses')->constrained();
     });
 
