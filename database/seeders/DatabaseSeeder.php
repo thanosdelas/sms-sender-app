@@ -21,23 +21,20 @@ class DatabaseSeeder extends Seeder{
    */
   public function run(): void{
     //
-    // Users
-    //
-    $users = \App\Models\User::factory(10)->create();
-    $user_ids = array_map(function($user){
-      return $user['id'];
-    }, $users->toArray());
-
-    //
     // Fetch first SMS Provider
     //
     $sms_provider = SmsProvider::query()->first();
 
     //
-    // Attach users to the first sms provider.
+    // Users
+    //
+    $users = \App\Models\User::factory(10)->create();
+
+    //
+    // Attach all users to an sms provider, according to their default selection.
     //
     foreach ($users as $user) {
-      $user->smsProviders()->attach($sms_provider->id);
+      $user->smsProviders()->attach($user->defaultSmsProvider);
     }
 
     //
@@ -67,10 +64,13 @@ class DatabaseSeeder extends Seeder{
     // Messages
     //
     for ($x = 1; $x <= 300; $x++) {
+      $user = $users[rand(0, count($users) - 1)];
+
       DB::table('messages')->insert([
-        'message' => $this->faker->sentence,
+        'message' => $this->faker->sentence, // or paragraph
         'phone_number' => $this->faker->e164PhoneNumber(),
-        'user_id' => $user_ids[rand(0, count($user_ids) - 1)],
+        'user_id' => $user->id,
+        'sms_provider_id' => $user->defaultSmsProvider->id,
         'message_status_id' => $message_status_ids[rand(0, count($message_status_ids) - 1)],
       ]);
     }
