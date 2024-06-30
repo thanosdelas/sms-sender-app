@@ -28,3 +28,5 @@ php artisan make:seeder TestDatabaseSeeder
 php artisan migrate --env=testing
 php artisan migrate:fresh --env=testing
 php artisan db:seed --env=testing
+
+php artisan make:migration add_default_sms_provider_to_users --table=users
