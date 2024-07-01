@@ -117,6 +117,11 @@ return new class extends Migration{
         'id' => '300',
         'status' => "failed",
         'description' => "Message delivery failed.",
+      ],
+      [
+        'id' => '400',
+        'status' => "queued",
+        'description' => "Message delivery failed.",
       ]
     ]);
 
@@ -128,6 +133,7 @@ return new class extends Migration{
       $table->id()->nullable(false);
       $table->string('message')->nullable(false);
       $table->string('phone_number')->nullable(false);
+      $table->string('sender_id')->nullable(false);
       $table->unsignedBigInteger('user_id')->nullable(false);
       $table->unsignedBigInteger('sms_provider_id')->nullable(false);
       $table->unsignedBigInteger('message_status_id')->nullable(false);

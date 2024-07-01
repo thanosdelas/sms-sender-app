@@ -31,7 +31,14 @@ php artisan db:seed --env=testing
 
 php artisan make:migration add_default_sms_provider_to_users --table=users
 
-
-
 php artisan make:controller Api/SendSMS --api
 php artisan make:test Api/SendSMSTest --feature
+
+php artisan make:exception UserSmsProviderException
+php artisan test --filter does_not_create_a_message_when_the_user_is_not_attached_to_sms_providers
+
+
+### Docker
+docker pull redis
+docker rm redis-laravel
+docker run -d --name redis-laravel -p 6379:6379 redis:latest
