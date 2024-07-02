@@ -53,7 +53,7 @@ return new class extends Migration{
       $table->timestamp('updated_at')->useCurrent()->nullable(false);
     });
 
-    // Insert default providers
+    // Insert default SMS providers
     DB::table('sms_providers')->insert([
       'id' => '100',
       'provider' => "sms.to",
@@ -61,19 +61,19 @@ return new class extends Migration{
       'details' => "Intergotelecom Platform SMS provider.",
     ]);
 
-    // Insert default providers
+    // Insert default SMS providers
     DB::table('sms_providers')->insert([
       'id' => '200',
       'provider' => "acme-sms-provider.com",
-      'sms_max_limit_per_day' => 999,
+      'sms_max_limit_per_day' => 900,
       'details' => "ACME Telecom SMS provider.",
     ]);
 
-    // Insert default providers
+    // Insert default SMS providers
     DB::table('sms_providers')->insert([
       'id' => '300',
       'provider' => "anotherone-sms-provider.com",
-      'sms_max_limit_per_day' => 888,
+      'sms_max_limit_per_day' => 800,
       'details' => "Anotherone Telecom SMS provider.",
     ]);
 
@@ -125,10 +125,6 @@ return new class extends Migration{
       ]
     ]);
 
-    // NOTE: The original technical specification does not explicitly require that messages
-    //       belong to users. However it makes sense to add this relation.
-    // TODO: Add the provider id here, according to current user selected provider,
-    //       to know each message, from which provider it was sent.
     Schema::create('messages', function (Blueprint $table) {
       $table->id()->nullable(false);
       $table->string('message')->nullable(false);
