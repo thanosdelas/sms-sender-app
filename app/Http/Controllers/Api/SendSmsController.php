@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Message;
+use App\Services\CreateMessageService;
+
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
@@ -21,15 +22,24 @@ class SendSmsController extends Controller{
 
     $messageData['user_id'] = $request->user()->id;
 
-    try{
-      $message = Message::create($messageData);
-      $result = $message->save();
+    $createMessageService = new CreateMessageService(
+      message: $messageData['message'],
+      phone_number: $messageData['phone_number'],
+      sender_id: $messageData['sender_id'],
+      user_id: $messageData['user_id']
+    );
 
-      return response()->json($this->responseData($message), 201);
+    if($createMessageService->createMessage() === true){
+      return response()->json(
+        $this->responseData(
+          $createMessageService->createdMessage()
+        ),
+      201);
     }
-    catch (ValidationException $e){
+
+    if(count($createMessageService->errors()) > 0){
       return $this->invalidRequest([
-        'error' => $e->errors()
+        'error' => $createMessageService->errors()
       ]);
     }
 
