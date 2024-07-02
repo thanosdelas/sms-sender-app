@@ -69,6 +69,7 @@ class DatabaseSeeder extends Seeder{
       DB::table('messages')->insert([
         'message' => $this->faker->sentence, // or paragraph
         'phone_number' => $this->faker->e164PhoneNumber(),
+        'sender_id' => "Sent From Corporate Entity User: $user->id",
         'user_id' => $user->id,
         'sms_provider_id' => $user->defaultSmsProvider->id,
         'message_status_id' => $message_status_ids[rand(0, count($message_status_ids) - 1)],
