@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\User;
 use \App\Models\SmsProvider;
+use Database\Seeders\TestDatabaseSeeder;
 
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -32,19 +33,21 @@ class SendSmsControllerTest extends TestCase{
    * @test
    */
   public function successfully_creates_an_sms_message(): void{
+    $this->seed(TestDatabaseSeeder::class);
     $this->authenticateUser();
 
     $data = [
-      'message' => 'Sms text message content',
+      'message' => 'Sms text message content. Visit Facebook to earn money.',
       'to' => '+446999666666',
       'sender_id' => 'Corporation Name'
     ];
 
+    $this->withoutExceptionHandling();
     $response = $this->postJson($this->endpoint, $data);
 
     $response->assertStatus(201);
     $this->assertEquals($response->json(), [
-      'message' => 'Sms text message content',
+      'message' => 'Sms text message content. Visit to earn money.',
       'phone_number' => '+446999666666',
       'sender_id' => 'Corporation Name',
       'sms_provider_id' => '100',

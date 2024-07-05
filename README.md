@@ -12,11 +12,13 @@ ALTER DATABASE sms_sender_app OWNER TO sms_sender_app;
 php artisan migrate:fresh
 php artisan db:seed
 
-php artisan make:test Models/MessageTest --unit --with-namespace
+php artisan make:model Badword
+
+php artisan make:test Models/MessageTest --unit
+php artisan make:test Repositories/BadwordRepository --unit
 
 php artisan make:factory MessageStatusFactory --model=MessageStatus
 php artisan make:factory MessageFactory --model=Message
-
 
 ### For testing
 CREATE DATABASE sms_sender_app_testing;
@@ -39,8 +41,24 @@ php artisan make:exception SmsMessageCreateException
 
 php artisan test --filter does_not_create_a_message_when_the_user_is_not_attached_to_sms_providers
 
-
-### Docker
+### Docker Redis
 docker pull redis
 docker rm redis-laravel
 docker run -d --name redis-laravel -p 6379:6379 redis:latest
+
+### Redis PHP Install
+composer require predis/predis
+php artisan cache:clear
+php artisan config:cache
+
+### redis-cli
+INFO
+SELECT 1
+KEYS *
+FLUSHALL
+
+GET laravel_database_badwords
+SMEMBERS laravel_database_badwords
+SCARRD count members
+
+

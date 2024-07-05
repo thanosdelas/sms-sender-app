@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder{
     // Badwords
     //
     $badwords = [
-      'faacebook',
+      'facebook',
       'instagram',
       'twitter',
       'tiktok'
