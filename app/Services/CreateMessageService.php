@@ -2,32 +2,36 @@
 
 namespace App\Services;
 
+use App\Services\Types\CreateMessageServiceInterface;
+use App\Services\Types\MessageToSendStruct;
+use App\Services\Types\MessageToSendStructType;
+
 use App\Repositories\BadwordRepository;
 
 use App\Exceptions\SmsMessageCreateException;
 use Illuminate\Support\Facades\Config;
 
 /**
- * Bussiness logic for creating a message.
+ * Bussiness logic for creating a message_content.
  * TODO:
  *   - Add phone number validation
  *   - Extract here the sms provider per user validation from Message model.
  */
-class CreateMessageService{
-  private string $message;
+class CreateMessageService implements CreateMessageServiceInterface{
+  private string $message_content;
   private string $sender_id;
   private string $phone_number;
   private string $user_id;
   private array $errors;
-  private \App\Models\Message $createdMessage;
+  private \App\Models\Message $message;
 
   public function __construct(
-    string $message,
+    string $message_content,
     string $sender_id,
     string $phone_number,
     string $user_id
   ){
-    $this->message = $message;
+    $this->message_content = $message_content;
     $this->sender_id = $sender_id;
     $this->phone_number =$phone_number;
     $this->user_id = $user_id;
@@ -35,10 +39,20 @@ class CreateMessageService{
     $this->validateMessage();
   }
 
+  public function message(): MessageToSendStructType{
+    return new MessageToSendStruct(
+      $this->message['message'],
+      $this->message['phone_number'],
+      $this->message['sender_id'],
+      $this->message['sms_provider_id'],
+      $this->message['message_status_id']
+    );
+  }
+
   public function createMessage(): bool{
     try{
-      $this->createdMessage = \App\Models\Message::create([
-        'message' => $this->message,
+      $this->message = \App\Models\Message::create([
+        'message' => $this->message_content,
         'phone_number' => $this->phone_number,
         'sender_id' => $this->sender_id,
         'user_id' => $this->user_id
@@ -53,16 +67,6 @@ class CreateMessageService{
     }
   }
 
-  public function createdMessage(): array{
-    return [
-      'message' => $this->createdMessage['message'],
-      'phone_number' => $this->createdMessage['phone_number'],
-      'sender_id' => $this->createdMessage['sender_id'],
-      'sms_provider_id' => $this->createdMessage['sms_provider_id'],
-      'message_status_id' => $this->createdMessage['message_status_id']
-    ];
-  }
-
   public function errors(): array{
     return $this->errors;
   }
@@ -72,8 +76,8 @@ class CreateMessageService{
     $badwordRepository = new BadwordRepository();
 
     // Remove whitespace and redundant spaces.
-    $this->message = trim($this->message);
-    $this->message = preg_replace('!\s+!', ' ', $this->message);
+    $this->message_content = trim($this->message_content);
+    $this->message_content = preg_replace('!\s+!', ' ', $this->message_content);
 
     $collectCleanWords = [];
 
@@ -82,16 +86,16 @@ class CreateMessageService{
     //       glued with dashes, or with no spaces. In the real word, we should
     //       apply a more complicated solution, which probably uses regular expressions
     //       and/or fuzzy search/approximate string matching.
-    $message_words = explode(" ", $this->message);
-    foreach ($message_words as $word) {
+    $message_content_words = explode(" ", $this->message_content);
+    foreach ($message_content_words as $word) {
       // Convert the word to lowercase, as all badwords are stored in lowercase.
       if(!$badwordRepository->isBadWord(strtolower($word))){
         $collectCleanWords[] = $word;
       }
     }
 
-    $this->message = implode(" ", $collectCleanWords);
+    $this->message_content = implode(" ", $collectCleanWords);
 
-    // throw new SmsMessageCreateException("Provided parameters are invalid. Cannot create message.");
+    // throw new SmsMessageCreateException("Provided parameters are invalid. Cannot create message_content.");
   }
 }
