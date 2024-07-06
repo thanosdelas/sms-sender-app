@@ -2,11 +2,16 @@
 
 namespace App\UseCases;
 
+use App\Models\Message;
+use App\Models\MessageStatus;
 use App\Services\SendMessageService;
 use App\Services\CreateMessageService;
+use App\Services\Types\MessageToSendStruct;
 use App\Services\Types\MessageToSendStructType;
+use App\Services\Types\MessageToSendSmsProviderStruct;
 use App\Services\Types\MessageToSendSmsProviderStructType;
 use App\Repositories\BadwordRepository;
+use App\Jobs\SendSMSMessageToProviderJob;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -52,16 +57,38 @@ class SendMessageUseCase implements SendMessageUseCaseInterface{
       return false;
     }
 
+    //
     // Send message to the SMS provider, to further dispatch it to the user phone.
+    //
+    // Directly send the message | Sync.
     if ($this->sendMessage() === false){
       return false;
     }
 
+    //
+    // TODO: Implement a way to create and append a job the queue | Async.
+    //
+
     return true;
   }
 
+  /**
+   * Message output.
+   * Has to be reloaded to be updated with the current state,
+   * after dispatching operations in the servicses.
+   */
   public function message(): MessageToSendStructType{
-    return $this->message;
+    // Reload message
+    $message = Message::find($this->message->data()['message_id']);
+
+    return new MessageToSendStruct(
+      message_id: $message['id'],
+      message: $message['message'],
+      phone_number: $message['phone_number'],
+      sender_id: $message['sender_id'],
+      sms_provider_id: $message['sms_provider_id'],
+      message_status_id: $message['message_status_id']
+    );
   }
 
   public function errors(){
@@ -96,17 +123,8 @@ class SendMessageUseCase implements SendMessageUseCaseInterface{
     $sendMessageService = new SendMessageService($this->message, $this->smsProvider);
 
     if($sendMessageService->send() === true){
-
-      // var_dump("\n\nSuccess\n\n");
-      // var_dump($sendMessageService);
-      // exit();
-
       return true;
     }
-
-    // var_dump("\n\nFailed\n\n");
-    // var_dump($sendMessageService->errors());
-    // exit();
 
     $this->errors = $sendMessageService->errors();
     return false;

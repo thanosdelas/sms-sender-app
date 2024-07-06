@@ -34,11 +34,11 @@ class Message extends Model{
       $model->message_status_id = 500;
     });
 
-    // NOTE: After a message has been created, we should consider some of the fields/attributes immutable.
-    //       Specifically, we should prevent update on:
-    //        - The `user_id`, because a message cannot change ownership.
-    //        - The `message`, `sender_id`, `phone_number`, `sms_provider_id`, if it has already been sent to the SMS provider (check status).
-    //        - [TODO] The `sms_provider_message_id`, when it has been received once and references the external id on the SMS provider (dependes on status).
+    // After a message has been created, we should consider some of the fields/attributes immutable.
+    // Specifically, we should prevent update on:
+    //  - The `user_id`, because a message cannot change ownership.
+    //  - The `message`, `sender_id`, `phone_number`, `sms_provider_id`, if it has already been sent to the SMS provider (check status).
+    //  - [TODO] The `sms_provider_message_id`, when it has been received once and references the external id on the SMS provider (dependes on status).
     static::updating(function ($model) {
       $immutableAttributes = [
         'message',

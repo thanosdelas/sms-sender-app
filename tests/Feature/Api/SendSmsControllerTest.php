@@ -11,6 +11,7 @@ use App\Services\Types\MessageToSendStruct;
 
 use Tests\TestCase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -73,7 +74,7 @@ class SendSmsControllerTest extends TestCase{
       ]
     ]);
 
-    // Ensure the message has not been saved in database
+    // Ensure no message has been created in database.
     $afterMessagesCount = Message::count();
     $this->assertEquals($afterMessagesCount, $beforeMessagesCount);
   }
@@ -82,6 +83,8 @@ class SendSmsControllerTest extends TestCase{
    * @test
    */
   public function successfully_creates_and_sends_an_sms_message_by_stubbing_the_upstream_http_request_but_response_contains_errors(): void{
+    // $this->markTestSkipped('Temporarilly skipped');
+
     $this->seed(TestDatabaseSeeder::class);
     $this->authenticateUser();
     $beforeMessagesCount = Message::count();
@@ -113,7 +116,8 @@ class SendSmsControllerTest extends TestCase{
       ]
     ]);
 
-    // Ensure the message has been saved in database
+    // Ensure the message has been saved in database.
+    // TODO: Match the entry on the database, once the id of the created message is returned in the reponse
     $afterMessagesCount = Message::count();
     $this->assertEquals($afterMessagesCount, $beforeMessagesCount + 1);
   }
@@ -122,6 +126,8 @@ class SendSmsControllerTest extends TestCase{
    * @test
    */
   public function successfully_creates_and_sends_an_sms_message_by_stubbing_the_upstream_http_request_but_response_contains_errors_bad_request(): void{
+    // $this->markTestSkipped('Temporarilly skipped');
+
     $this->seed(TestDatabaseSeeder::class);
     $this->authenticateUser();
     $beforeMessagesCount = Message::count();
@@ -153,7 +159,8 @@ class SendSmsControllerTest extends TestCase{
       ]
     ]);
 
-    // Ensure the message has been saved in database
+    // Ensure the message has been saved in database.
+    // TODO: Match the entry on the database, once the id of the created message is returned in the reponse
     $afterMessagesCount = Message::count();
     $this->assertEquals($afterMessagesCount, $beforeMessagesCount + 1);
   }
@@ -190,28 +197,34 @@ class SendSmsControllerTest extends TestCase{
       'phone_number' => '+446999666666',
       'sender_id' => 'CorpSMS',
       'sms_provider_id' => '100',
-      'message_status_id' => '400'
+      'message_status_id' => '250'
     ]);
 
-    // Ensure the message has been saved in database
+    // Ensure the message has been saved in database.
+    // TODO: Match the entry on the database, once the id of the created message is returned in the reponse
     $afterMessagesCount = Message::count();
     $this->assertEquals($afterMessagesCount, $beforeMessagesCount + 1);
   }
 
   /**
    * @test
-   * WARNING: The following test will actually make a real HTTP request
+   * WARNING: The following test is going to make a real HTTP request
    *          to the SMS provider. If everything is configured properly,
    *          set your phone number in the `$phoneNummber` variable below, to receive a message.
    */
   public function successfully_creates_and_sends_an_sms_message_with_a_real_http_request_to_the_sms_provider(): void{
-    $this->markTestSkipped('This test is skipped. Enable it if you wish to send a real HTTP request to the SMS provider.');
-
-    // $phoneNummber = '+306980999999';
-    $phoneNummber = '+306980119179';
+    //
+    // This test is skipped, as the previous tests, with stubbed upstream requests are sufficient for development.
+    //
+    $this->markTestSkipped('[Skipped]. Enable it if you wish to send a real HTTP request to the SMS provider.');
+    //
+    // Set your phone number here, to actually receive a message to your phone.
+    //
+    $phoneNummber = '';
 
     $this->seed(TestDatabaseSeeder::class);
     $this->authenticateUser();
+    $beforeMessagesCount = Message::count();
 
     $data = [
       'message' => 'Sms text message content. Visit Facebook to earn money.',
@@ -228,10 +241,11 @@ class SendSmsControllerTest extends TestCase{
       'phone_number' => $phoneNummber,
       'sender_id' => 'CorpSMS',
       'sms_provider_id' => '100',
-      'message_status_id' => '400'
+      'message_status_id' => '250'
     ]);
 
-    // Ensure the message has been saved in database
+    // Ensure the message has been saved in database.
+    // TODO: Match the entry on the database, once the id of the created message is returned in the reponse
     $afterMessagesCount = Message::count();
     $this->assertEquals($afterMessagesCount, $beforeMessagesCount + 1);
   }

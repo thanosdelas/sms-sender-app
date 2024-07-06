@@ -1,6 +1,9 @@
 <?php
 
 namespace App\Services;
+
+use App\Models\Message;
+use App\Models\MessageStatus;
 use App\Services\Types\MessageToSendStructType;
 use App\Services\Types\MessageToSendSmsProviderStructType;
 
@@ -10,8 +13,6 @@ use Illuminate\Support\Facades\Config;
 
 /**
  * Send an SMS message to the API of the SMS provider.
- * TODO: We should probably defer the actual request to the SMS provider
- *       API, to a job, put it inside a queue, and process the response elsewhere.
  */
 class SendMessageService{
   private array $responseMessage;
@@ -38,26 +39,14 @@ class SendMessageService{
   }
 
   public function send(): bool{
-    //
-    // TODO: Add validation here, and return is is empty
-    //
-    // NOTE: The access_token for each user and sms provider could
+    // NOTE: The API access_token for each user and SMS provider could
     //       have been stored in the database, but for the sake of this
     //       technical assignment, we load it from the ENV.
     $this->accessToken = env('APP_SMS_TO_PROVIDER_ACCESS_TOKEN');
-
-
     $this->smsProviderApiURL = $this->smsProvider->data()['api_url'];
-
-    // You can use the following URLs for dummy api to make it fail.
-    // $this->smsProviderApiURL = 'https://example.com/';
-    // $this->smsProviderApiURL = 'https://dummyjson.com/posts/add';
 
     // Send the message to the SMS provider.
     $response = $this->sendSMSMessage();
-
-    // var_dump($response);
-    // exit();
 
     if ($response['status_code'] !== 200 && $response['status_code'] !== 201){
       $this->errors = [
@@ -68,17 +57,21 @@ class SendMessageService{
       return false;
     }
 
-
-
-    // var_dump("HERE");
-    // var_dump($response['body']);
-    // exit();
-
+    // NOTE: On success, we should update the message with details
+    //       from the SMS provider, as well as update the status.
+    $message = Message::find($this->message->data()['message_id']);
+    $status_id = MessageStatus::where('status', 'queued_in_sms_provider')->first()->id;
+    $message->sms_provider_message_id = $response['body']['message_id'];
+    $message->message_status_id = $status_id;
+    $message->save();
 
     $this->responseMessage = $response['body'];
     return true;
   }
 
+  /**
+   * Send the message to the SMS provider.
+   */
   private function sendSMSMessage(){
     $headers = [
       'Authorization' => "Bearer $this->accessToken",
@@ -89,10 +82,8 @@ class SendMessageService{
       'message' => $this->message->data()['message'],
       'to' => $this->message->data()['phone_number'],
       'sender_id' => $this->message->data()['sender_id'],
-      // NOTE: The following should be configured in the database or the ENV.
-      //       We leave them hardcoded for this assignment`.
-      'bypass_optout' => true,
-      'callback_url' => 'localhost:8000'
+      'bypass_optout' => true, // Should be configured and loaded from the database or in the config.
+      'callback_url' => 'localhost:8000' // Should be configured and loaded from the database or in the config.
     ]);
 
     return $this->parseResponse($response);
