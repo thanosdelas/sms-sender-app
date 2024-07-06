@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 // to examine the schema and ensure referential
 // integrity, indexes, and auto-increment values.
 //
-
+//
 //
 // List all foreign keys
 //
@@ -21,12 +21,12 @@ use Illuminate\Support\Facades\Schema;
 // AND    connamespace = 'public'::regnamespace
 // ORDER  BY conrelid::regclass::text, contype DESC;
 //
-
+//
 //
 // List all sequences (auto-increment)
 // SELECT c.relname FROM pg_class c WHERE c.relkind = 'S' order BY c.relname;
 //
-
+//
 //
 // List all indexes
 //
@@ -117,18 +117,28 @@ return new class extends Migration{
       ],
       [
         'id' => '200',
-        'status' => "pending",
-        'description' => "Message delivery is initiated but its delivery status is pending",
+        'status' => "queued_for_dispatch_to_the_sms_provider",
+        'description' => "Message is queued to be sent to the SMS provider.",
+      ],
+      [
+        'id' => '250',
+        'status' => "queued_in_sms_provider",
+        'description' => "Message has been sent to the SMS provider, and is queued for delivey.",
       ],
       [
         'id' => '300',
+        'status' => "pending",
+        'description' => "Message delivery is initiated but its delivery status is pending.",
+      ],
+      [
+        'id' => '400',
         'status' => "failed",
         'description' => "Message delivery failed.",
       ],
       [
-        'id' => '400',
-        'status' => "queued",
-        'description' => "Message delivery failed.",
+        'id' => '500',
+        'status' => "created",
+        'description' => "Message has been created, but has not been queued or processed.",
       ]
     ]);
 

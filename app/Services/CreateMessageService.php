@@ -48,6 +48,7 @@ class CreateMessageService implements CreateMessageServiceInterface{
    */
   public function message(): MessageToSendStructType{
     return new MessageToSendStruct(
+      message_id: $this->message['id'],
       message: $this->message['message'],
       phone_number: $this->message['phone_number'],
       sender_id: $this->message['sender_id'],
@@ -69,7 +70,7 @@ class CreateMessageService implements CreateMessageServiceInterface{
   }
 
   /**
-   * Create and save a message using the Model.
+   * Create and save a message in the database.
    */
   public function createMessage(): bool{
     try{
@@ -103,13 +104,12 @@ class CreateMessageService implements CreateMessageServiceInterface{
     $this->message_content = trim($this->message_content);
     $this->message_content = preg_replace('!\s+!', ' ', $this->message_content);
 
-    $collectCleanWords = [];
-
     // NOTE: The following assumes that all badwords are single words,
     //       which does not account for phrases of bad words, or bad words
-    //       glued with dashes, or with no spaces. In the real word, we should
+    //       mixed with special characters, or no spaces. In the real word, we should
     //       apply a more complicated solution, which probably uses regular expressions
     //       and/or fuzzy search/approximate string matching.
+    $collectCleanWords = [];
     $message_content_words = explode(" ", $this->message_content);
     foreach ($message_content_words as $word) {
       // Convert the word to lowercase, as all badwords are stored in lowercase.
@@ -120,6 +120,8 @@ class CreateMessageService implements CreateMessageServiceInterface{
 
     $this->message_content = implode(" ", $collectCleanWords);
 
-    // throw new SmsMessageCreateException("Provided parameters are invalid. Cannot create message_content.");
+    if(strlen($this->message_content) === 0){
+      throw new SmsMessageCreateException("Message is empty. Cannot create message.");
+    }
   }
 }
