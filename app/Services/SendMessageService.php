@@ -1,102 +1,108 @@
 <?php
 
 namespace App\Services;
+use App\Services\Types\MessageToSendStructType;
+use App\Services\Types\MessageToSendSmsProviderStructType;
 
-use App\Repositories\BadwordRepository;
-
+use Illuminate\Support\Facades\Http;
 use App\Exceptions\SmsMessageCreateException;
 use Illuminate\Support\Facades\Config;
 
 /**
- * Bussiness logic for creating a message.
- * TODO:
- *   - Add phone number validation
- *   - Extract here the sms provider per user validation from Message model.
+ * Send an SMS message to the API of the SMS provider.
+ * TODO: We should probably defer the actual request to the SMS provider
+ *       API, to a job, put it inside a queue, and process the response elsewhere.
  */
 class SendMessageService{
-  private App\Services\CreateMessageService $message;
+  private array $responseMessage;
+  private string $accessToken;
+  private string $smsProviderApiURL;
+  private MessageToSendStructType $message;
+  private MessageToSendSmsProviderStructType $smsProvider;
   private array $errors;
 
   public function __construct(
-    App\Services\CreateMessageService $message
+    MessageToSendStructType $message,
+    MessageToSendSmsProviderStructType $smsProvider
   ){
     $this->message = $message;
+    $this->smsProvider = $smsProvider;
+  }
+
+  public function responseMessage(){
+    return $this->responseMessage;
+  }
+
+  public function errors(): array{
+    return $this->errors;
   }
 
   public function send(): bool{
-    try{
-      $this->createdMessage = \App\Models\Message::create([
-        'message' => $this->message,
-        'phone_number' => $this->phone_number,
-        'sender_id' => $this->sender_id,
-        'user_id' => $this->user_id
-      ]);
+    //
+    // TODO: Add validation here, and return is is empty
+    //
+    // NOTE: The access_token for each user and sms provider could
+    //       have been stored in the database, but for the sake of this
+    //       technical assignment, we load it from the ENV.
+    $this->accessToken = env('APP_SMS_TO_PROVIDER_ACCESS_TOKEN');
 
-      $this->sendSMSMessage();
 
-      return true;
-    }
-    catch (ValidationException $e){
-      $this->errors = $e->errors();
+    $this->smsProviderApiURL = $this->smsProvider->data()['api_url'];
+
+    // You can use the following URLs for dummy api to make it fail.
+    // $this->smsProviderApiURL = 'https://example.com/';
+    // $this->smsProviderApiURL = 'https://dummyjson.com/posts/add';
+
+    // Send the message to the SMS provider.
+    $response = $this->sendSMSMessage();
+
+    // var_dump($response);
+    // exit();
+
+    if ($response['status_code'] !== 200 && $response['status_code'] !== 201){
+      $this->errors = [
+        'status_code' => $response['status_code'],
+        'message' => $response['body']['message']
+      ];
 
       return false;
     }
+
+
+
+    // var_dump("HERE");
+    // var_dump($response['body']);
+    // exit();
+
+
+    $this->responseMessage = $response['body'];
+    return true;
   }
 
   private function sendSMSMessage(){
-    // $url = 'https://api.sms.to/sms/send';
-    // $url = 'https://example.com';
-    // $url = "https://dummyjson.com/posts/add";
-    $url = "localhost:4444";
-
-    $data = [
-      "message" => "This is test and \n this is a new line",
-      "to" => "+35799999999999",
-      "bypass_optout" => true,
-      "sender_id" => "SMSto",
-      "callback_url" => "localhost:8000"
-    ];
-
-    // $headers = [
-    //   'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2F1dGg6ODA4MC9hcGkvdjEvdXNlcnMvYXBpL2tleXMvZ2VuZXJhdGUiLCJpYXQiOjE3MjAxNjU1MTUsIm5iZiI6MTcyMDE2NTUxNSwianRpIjoiYW1SSE9mUUNCbUwxaGV0QSIsInN1YiI6NDU5OTQ5LCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.9iJtSaUtUXz4MAAsdDMNHRSOp4a2bxosi1VkRGQDn2E',
-    //   'Content-Type: application/json'
-    // ];
-
     $headers = [
-      'Authorization: Bearer INVALID',
-      'Content-Type: application/json'
+      'Authorization' => "Bearer $this->accessToken",
+      'Content-Type' => 'application/json',
     ];
 
-    $ch = curl_init($url);
+    $response = Http::withHeaders($headers)->post($this->smsProviderApiURL, [
+      'message' => $this->message->data()['message'],
+      'to' => $this->message->data()['phone_number'],
+      'sender_id' => $this->message->data()['sender_id'],
+      // NOTE: The following should be configured in the database or the ENV.
+      //       We leave them hardcoded for this assignment`.
+      'bypass_optout' => true,
+      'callback_url' => 'localhost:8000'
+    ]);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HEADER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    return $this->parseResponse($response);
+  }
 
-    $response = curl_exec($ch);
-
-    $responseInfo = curl_getinfo($ch);
-
-    var_dump($responseInfo['content_type']);
-    var_dump($responseInfo['http_code']);
-    var_dump(curl_errno($ch));
-    // exit();
-
-    if (curl_errno($ch)) {
-      echo 'Error:' . curl_error($ch);
-      var_dump($ch);
-      exit();
-
-    } else {
-      echo "\n\n\n\nNOT ERROR";
-      echo 'Response:' . $response;
-
-      var_dump($response);
-      exit();
-    }
-
-    curl_close($ch);
+  private function parseResponse($response): array{
+    return [
+      'headers' => $response->headers()['Content-Type'],
+      'status_code' => $response->status(),
+      'body' => json_decode($response->body(), true)
+    ];
   }
 }

@@ -51,13 +51,13 @@ class BadwordRepository implements BadwordRepositoryInterface{
    */
   private function cacheBadwords(): bool{
     // NOTE: We could use the Laravel provided facade for caching here, in order to be driver
-    //       agnostic and easilly switch to another caching mechanism, however doing that way
-    //       the data isstored in a serialized format, and we have to fetch it from the cache,
+    //       agnostic and easilly switch to another caching mechanism, however doing it that way
+    //       the data is stored in a serialized format, and we have to fetch it from the cache,
     //       deserialize it and loop over it, which is not efficient. Ofcourse this is subject
     //       to amount of data, but we can presume that it's a long list, so we are tightly coupled
-    //       to Redis here, and we should re-implement this method shall we need to swicth to another driver.
+    //       to Redis here, and we should re-implement this method, in case we need to swicth to another driver.
     //
-    //       TO be driver agnostic use:
+    //       To be driver agnostic use:
     //       ```
     //       return Cache::rememberForever('badwords', function () {
     //         return Badword::pluck('badword')->toArray();
@@ -69,7 +69,7 @@ class BadwordRepository implements BadwordRepositoryInterface{
       $badwordsFromDatabase = Badword::pluck('badword')->toArray();
 
       if(count($badwordsFromDatabase) === 0){
-        throw new \Exception('No badwords found in database to update cache');
+        throw new \Exception('No badwords found in database to update cache.');
       }
 
       // Cache them as a Redis SET

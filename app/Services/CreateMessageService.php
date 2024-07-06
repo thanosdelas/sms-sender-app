@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Services\Types\CreateMessageServiceInterface;
 use App\Services\Types\MessageToSendStruct;
 use App\Services\Types\MessageToSendStructType;
-
-use App\Repositories\BadwordRepository;
+use App\Services\Types\MessageToSendSmsProviderStruct;
+use App\Services\Types\MessageToSendSmsProviderStructType;
+use App\Services\Types\CreateMessageServiceInterface;
 
 use App\Exceptions\SmsMessageCreateException;
 use Illuminate\Support\Facades\Config;
@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Config;
  * TODO:
  *   - Add phone number validation
  *   - Extract here the sms provider per user validation from Message model.
+ *   - Prevent creating a new message if the max limit per day is reached.
  */
 class CreateMessageService implements CreateMessageServiceInterface{
   private string $message_content;
@@ -24,31 +25,52 @@ class CreateMessageService implements CreateMessageServiceInterface{
   private string $user_id;
   private array $errors;
   private \App\Models\Message $message;
+  private \App\Repositories\BadwordRepository $badwordRepository;
 
   public function __construct(
     string $message_content,
     string $sender_id,
     string $phone_number,
-    string $user_id
+    string $user_id,
+    \App\Repositories\BadwordRepository $badwordRepository
   ){
     $this->message_content = $message_content;
     $this->sender_id = $sender_id;
     $this->phone_number =$phone_number;
     $this->user_id = $user_id;
+    $this->badwordRepository = $badwordRepository;
 
     $this->validateMessage();
   }
 
+  /**
+   * Output Data
+   */
   public function message(): MessageToSendStructType{
     return new MessageToSendStruct(
-      $this->message['message'],
-      $this->message['phone_number'],
-      $this->message['sender_id'],
-      $this->message['sms_provider_id'],
-      $this->message['message_status_id']
+      message: $this->message['message'],
+      phone_number: $this->message['phone_number'],
+      sender_id: $this->message['sender_id'],
+      sms_provider_id: $this->message['sms_provider_id'],
+      message_status_id: $this->message['message_status_id']
     );
   }
 
+  /**
+   * Output Data
+   */
+  public function smsProvider(): MessageToSendSmsProviderStructType{
+    return new MessageToSendSmsProviderStruct(
+      provider: $this->message->smsProvider->provider,
+      details: $this->message->smsProvider->details,
+      api_url: $this->message->smsProvider->api_url,
+      sms_max_limit_per_day: $this->message->smsProvider->sms_max_limit_per_day
+    );
+  }
+
+  /**
+   * Create and save a message using the Model.
+   */
   public function createMessage(): bool{
     try{
       $this->message = \App\Models\Message::create([
@@ -71,10 +93,12 @@ class CreateMessageService implements CreateMessageServiceInterface{
     return $this->errors;
   }
 
+  /**
+   * Validate and transform/mutate the message to be sent.
+   * Remove white space, allow only one space between words,
+   * and filter out badwords using the badword repository.
+   */
   private function validateMessage(){
-    // TODO: Use DI here.
-    $badwordRepository = new BadwordRepository();
-
     // Remove whitespace and redundant spaces.
     $this->message_content = trim($this->message_content);
     $this->message_content = preg_replace('!\s+!', ' ', $this->message_content);
@@ -89,7 +113,7 @@ class CreateMessageService implements CreateMessageServiceInterface{
     $message_content_words = explode(" ", $this->message_content);
     foreach ($message_content_words as $word) {
       // Convert the word to lowercase, as all badwords are stored in lowercase.
-      if(!$badwordRepository->isBadWord(strtolower($word))){
+      if($this->badwordRepository->isBadWord(strtolower($word)) === false){
         $collectCleanWords[] = $word;
       }
     }

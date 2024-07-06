@@ -18,7 +18,7 @@ class SendSmsController extends Controller{
     $messageData = $this->validateMessageParameters($request->json()->all());
 
     if(array_key_exists('errors', $messageData)){
-      return $this->responseError($messageData['errors']);
+      return $this->responseError($messageData['errors'], 400);
     }
 
     $messageData['user_id'] = $request->user()->id;
@@ -37,9 +37,15 @@ class SendSmsController extends Controller{
     }
 
     if(count($sendMessageUseCase->errors()) > 0){
+      // Default is Unprocessable Entity
+      $httpStatusCode = 422;
+      if(array_key_exists('status_code', $sendMessageUseCase->errors())){
+        $httpStatusCode = $sendMessageUseCase->errors()['status_code'];
+      }
+
       return $this->responseError([
-        'error' => $sendMessageUseCase->errors()
-      ]);
+        'message' => $sendMessageUseCase->errors()['message']
+      ], $httpStatusCode);
     }
 
     return $this->responseError(['error' => 'Could not create product']);
