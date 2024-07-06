@@ -7,10 +7,11 @@ use App\Models\User;
 use App\Models\Message;
 use App\Models\MessageStatus;
 use Database\Seeders\TestDatabaseSeeder;
-use Illuminate\Validation\ValidationException;
 use App\Exceptions\UserSmsProviderException;
+use App\Exceptions\ImmutableMessageAttributesException;
 
 use Tests\TestCase;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -59,10 +60,10 @@ class MessageTest extends TestCase{
       'sender_id' => "Corporation Sender",
       'user_id' => $user_second->id,
       'sms_provider_id' => $sms_provider_sms_to->id,
-      'message_status_id' => '400'
+      'message_status_id' => '500'
     ]);
 
-    $this->assertEquals($message->messageStatus->status, 'queued');
+    $this->assertEquals($message->messageStatus->status, 'created');
     $this->assertEquals($message->smsProvider->provider, 'sms.to');
   }
 
@@ -92,5 +93,31 @@ class MessageTest extends TestCase{
 
     // Create message
     $message = Message::factory()->forUser($user)->create();
+  }
+
+  /**
+   * @test
+   */
+  public function restricts_specific_message_attributes_from_beeing_updated(): void{
+    $sms_provider_sms_to = SmsProvider::where('provider', 'sms.to')->first();
+
+    $user = User::factory()->create();
+    $user->smsProviders()->attach($user->defaultSmsProvider);
+
+    // Create message
+    $message = Message::factory()->create();
+
+    $this->assertEquals($message->messageStatus->status, 'created');
+    $this->assertEquals($message->smsProvider->provider, 'sms.to');
+
+    // Update message with restricted attributes and expect to throw error.
+    $this->expectException(ImmutableMessageAttributesException::class);
+    $this->expectExceptionMessage('Update is not allowing for any of the following attributes: [message, sender_id, phone_number, sms_provider_id, user_id]');
+    $message->message = 'Updated message content';
+    $message->sender_id = 'Updated sender_id';
+    $message->phone_number = 'Updated phone_number';
+    $message->sms_provider_id = 'Updated sms_provider_id';
+    $message->user_id = 'Updated user_id';
+    $message->save();
   }
 }

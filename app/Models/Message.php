@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Exceptions\UserSmsProviderException;
+use App\Exceptions\ImmutableMessageAttributesException;
+
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,11 +27,36 @@ class Message extends Model{
       $model->validateProvidedParameters();
       $model->validateSmsProviderConfiguration();
 
-      // Default business rules, for message creation.
+      // Default state, when creating a message.
       // Ensure `sms_provider_id` and `message_status_id` have always these
-      // values on message create, regardless of outside assignment.
+      // values on message create, regardless of any outside assignment.
       $model->sms_provider_id = $model->user->defaultSmsProvider->toArray()['id'];
-      $model->message_status_id = 400;
+      $model->message_status_id = 500;
+    });
+
+    // NOTE: After a message has been created, we should consider some of the fields/attributes immutable.
+    //       Specifically, we should prevent update on:
+    //        - The `user_id`, because a message cannot change ownership.
+    //        - The `message`, `sender_id`, `phone_number`, `sms_provider_id`, if it has already been sent to the SMS provider (check status).
+    //        - [TODO] The `sms_provider_message_id`, when it has been received once and references the external id on the SMS provider (dependes on status).
+    static::updating(function ($model) {
+      $immutableAttributes = [
+        'message',
+        'sender_id',
+        'phone_number',
+        'sms_provider_id',
+        'user_id'
+      ];
+
+      $changedAttributes = array_filter($immutableAttributes, function($attribute) use ($model){
+        return $model->isDirty($attribute);
+      });
+
+      if(count($changedAttributes) > 0){
+        $changedAttributesString = implode(", ", $changedAttributes);
+
+        throw new ImmutableMessageAttributesException("Update is not allowing for any of the following attributes: [$changedAttributesString]");
+      }
     });
   }
 

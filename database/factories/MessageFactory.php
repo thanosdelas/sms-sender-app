@@ -23,7 +23,7 @@ class MessageFactory extends Factory
       'sender_id' => 'Corporation Sender',
       'user_id' => User::query()->first(),
       'sms_provider_id' => User::query()->first()->defaultSmsProvider,
-      'message_status_id' => MessageStatus::where('status', 'delivered')->first(),
+      'message_status_id' => MessageStatus::where('status', 'created')->first(),
     ];
   }
 
