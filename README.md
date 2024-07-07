@@ -75,3 +75,7 @@ composer require laravel/horizon
 php artisan horizon:install
 php artisan horizon
 composer remove laravel/horizon
+
+
+### Install libphonenumber for phone validation.
+composer require giggsey/libphonenumber-for-php
