@@ -20,6 +20,9 @@
           with Zend OPcache v8.1.29, Copyright (c), by Zend Technologies
         </li>
         <li>
+          Composer version 2.7.0
+        </li>
+        <li>
           Laravel Framework 10.48.14
         </li>
         <li>
