@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"  # Map port 8000 in the container to port 8000 on the host
+    environment:
+      # Environment variables for PostgreSQL and Redis connection
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:14.12
+    environment:
+      POSTGRES_DB: sms_sender_app
+      POSTGRES_USER: sms_sender_app
+      POSTGRES_PASSWORD: sms_sender_app
+    ports:
+      - "5432:5432"  # Map port 5432 in the container to port 5432 on the host
+
+  redis:
+    image: redis:7.2.5
+    ports:
+      - "6379:6379"  # Map port 6379 in the container to port 6379 on the host
