@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-class HomeController extends Controller
-{
+class HomeController extends Controller{
   public function home(){
     return view('welcome', [
-      'title' => 'Laravel Demo App',
+      'title' => 'Sms Sender App',
       'api_routes' => $this->apiRoutes()
     ]);
   }
@@ -16,25 +15,15 @@ class HomeController extends Controller
   private function apiRoutes(){
     $apiRoutes = [];
 
-    $routes = \Route::getRoutes();
+    $apiRoutes[] = [
+      'path' => 'test-sms',
+      'description' => 'Use to manually test sending an SMS to the provider and dispatch it the user phone. Requires configuration.'
+    ];
 
-    // print_r($routes);
-    // exit();
-
-    foreach ($routes as $value) {
-      // if($value->action['prefix'] === 'api'){
-      //   $apiRoutes[] = $value->uri;
-      // }
-
-      if (in_array('api', $route->action['middleware'] ?? [])) {
-        $apiRoutes[] = [
-            'uri' => $route->uri,
-            'name' => $route->getName(),
-            'methods' => $route->methods,
-            'action' => $route->getActionName(),
-        ];
-      }
-    }
+    $apiRoutes[] = [
+      'path' => 'api/send/sms',
+      'description' => 'REST API endpoint to send an SMS to the provider. Requires authentication. Supports only POST requests.'
+    ];
 
     return $apiRoutes;
   }
