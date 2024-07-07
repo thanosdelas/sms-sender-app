@@ -10,7 +10,9 @@ use Database\Seeders\TestDatabaseSeeder;
 use App\Services\Types\MessageToSendStruct;
 
 use Tests\TestCase;
+use \Illuminate\Support\Env;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -197,13 +199,73 @@ class SendSmsControllerTest extends TestCase{
       'phone_number' => '+446999666666',
       'sender_id' => 'CorpSMS',
       'sms_provider_id' => '100',
-      'message_status_id' => '250'
+      'message_status_id' => '250' // queued_in_sms_provider
     ]);
 
     // Ensure the message has been saved in database.
     // TODO: Match the entry on the database, once the id of the created message is returned in the reponse
     $afterMessagesCount = Message::count();
     $this->assertEquals($afterMessagesCount, $beforeMessagesCount + 1);
+  }
+
+  /**
+   * @test
+   * Test when queue is enabled.
+   */
+  public function successfully_creates_and_sends_an_sms_message_by_stubbing_the_upstream_http_request_when_queue_is_enabled(): void{
+    //
+    // Stub the env QUEUE_ENABLED variable to enable queue from .env
+    //
+    Env::getRepository()->set('QUEUE_ENABLED', 'true');
+
+    //
+    // Clear sms_messages queue from Redis. We could also use `Redis::flushall();`,
+    // but this may affect other Redis dependant operations like caching.
+    //
+    $redis = Redis::connection();
+    $redis->del('queues:sms_messages');
+    $this->assertEquals(0, $redis->llen('queues:sms_messages'));
+
+    $this->seed(TestDatabaseSeeder::class);
+    $this->authenticateUser();
+    $beforeMessagesCount = Message::count();
+
+    // Stub fixture
+    $expectedResponse = '{"message":"Message is queued for sending! Please check report for update","success":true,"message_id":"459949-1720166-22b8-0cf1-8214b1ca-d9"}';
+    $expectedResponseParsed = json_decode($expectedResponse, true);
+
+    // Stub the HTTP request to the SMS provider.
+    Http::fake([
+      'https://api.sms.to/sms/send' => Http::response($expectedResponseParsed, 200)
+    ]);
+
+    $data = [
+      'message' => 'Sms text message content. Visit Facebook to earn money.',
+      'to' => '+446999666666',
+      'sender_id' => 'CorpSMS'
+    ];
+
+    $this->withoutExceptionHandling();
+    $response = $this->postJson($this->endpoint, $data);
+
+    $response->assertStatus(201);
+    $this->assertEquals($response->json(), [
+      'message' => 'Sms text message content. Visit to earn money.',
+      'phone_number' => '+446999666666',
+      'sender_id' => 'CorpSMS',
+      'sms_provider_id' => '100',
+      'message_status_id' => '200' // queued_for_dispatch_to_the_sms_provider
+    ]);
+
+    // Ensure the message has been saved in database.
+    // TODO: Match the entry on the database, once the id of the created message is returned in the reponse
+    $afterMessagesCount = Message::count();
+    $this->assertEquals($afterMessagesCount, $beforeMessagesCount + 1);
+
+    // TODO: Ensure the created message above is in queue by its id.
+    $this->assertEquals($redis->llen('queues:sms_messages'), 1);
+    $jobCount = Queue::connection('redis')->size('sms_messages');
+    $this->assertEquals($jobCount, 1);
   }
 
   /**
@@ -226,8 +288,13 @@ class SendSmsControllerTest extends TestCase{
     $this->authenticateUser();
     $beforeMessagesCount = Message::count();
 
+    // NOTE: It seems that sending the same message multiple times, triggers
+    //       a spam filter on the SMS provider. The message is successfuly sent
+    //       upstream, but the provider blocks delivery with status FAILED. Make
+    //       sure to create a unique message content to avoid blocking.
+    $timestamp = date('Y-m-d H:i:s');
     $data = [
-      'message' => 'Sms text message content. Visit Facebook to earn money.',
+      'message' => "Sms text message at $timestamp. Visit Facebook to earn money.",
       'to' => $phoneNummber,
       'sender_id' => 'CorpSMS'
     ];
@@ -237,7 +304,7 @@ class SendSmsControllerTest extends TestCase{
 
     $response->assertStatus(201);
     $this->assertEquals($response->json(), [
-      'message' => 'Sms text message content. Visit to earn money.',
+      'message' => "Sms text message at $timestamp. Visit to earn money.",
       'phone_number' => $phoneNummber,
       'sender_id' => 'CorpSMS',
       'sms_provider_id' => '100',

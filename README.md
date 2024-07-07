@@ -66,4 +66,12 @@ GET laravel_database_badwords
 SMEMBERS laravel_database_badwords
 SCARRD count members
 
+### Queues
+php artisan queue:failed
+php artisan queue:work --queue=sms_messages
 
+### Install Horizon to monitor job queues.
+composer require laravel/horizon
+php artisan horizon:install
+php artisan horizon
+composer remove laravel/horizon

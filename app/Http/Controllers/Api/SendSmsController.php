@@ -32,7 +32,7 @@ class SendSmsController extends Controller{
 
     if($sendMessageUseCase->dispatch() === true){
       return $this->responseSuccess(
-        $sendMessageUseCase->message(), 201
+        $sendMessageUseCase->messageOutputReloaded(), 201
       );
     }
 
@@ -93,8 +93,8 @@ class SendSmsController extends Controller{
       'message' => $message->data()['message'],
       'phone_number' => $message->data()['phone_number'],
       'sender_id' => $message->data()['sender_id'],
-      'sms_provider_id' => $message->data()['sms_provider_id'],
-      'message_status_id' => $message->data()['message_status_id']
+      'sms_provider_id' => $message->data()['sms_provider_id'], // To be converted to a human readble format for presentation.
+      'message_status_id' => $message->data()['message_status_id'] // To be converted to a human readble format for presentation.
     ];
   }
 }
