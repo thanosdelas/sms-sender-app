@@ -16,18 +16,22 @@ class TestSmsSendController extends Controller{
   public function test(Request $request){
     $timestamp = date('Y-m-d H:i:s');
 
-    // NOTE: Fill i your phone below to actually receive a message.
+    // NOTE: Fill in your phone below to actually receive a message.
     $messageData = [
       'message' => "Sms text message content $timestamp. Visit Facebook to earn money.",
       // 'phone_number' => '',
       'sender_id' => 'CorpSMS'
     ];
 
+    if(isset($_GET['phone_number']) && strlen($_GET['phone_number']) > 0){
+      $messageData = trim($_GET['phone_number']);
+    }
+
     $messageData['user_id'] = User::first()->id;
 
     $sendMessageUseCase = new SendMessageUseCase(
       message_content: $messageData['message'],
-      phone_number: $messageData['/'],
+      phone_number: $messageData['phone_number'],
       sender_id: $messageData['sender_id'],
       user_id: $messageData['user_id']
     );
