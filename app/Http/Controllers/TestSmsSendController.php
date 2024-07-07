@@ -24,7 +24,7 @@ class TestSmsSendController extends Controller{
     ];
 
     if(isset($_GET['phone_number']) && strlen($_GET['phone_number']) > 0){
-      $messageData = trim($_GET['phone_number']);
+      $messageData['phone_number'] = trim($_GET['phone_number']);
     }
 
     $messageData['user_id'] = User::first()->id;
