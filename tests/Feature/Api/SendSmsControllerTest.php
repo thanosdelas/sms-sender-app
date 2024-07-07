@@ -84,6 +84,44 @@ class SendSmsControllerTest extends TestCase{
   /**
    * @test
    */
+  public function fails_to_create_and_sends_an_sms_message_because_phone_number_is_invalid(): void{
+    $this->seed(TestDatabaseSeeder::class);
+    $this->authenticateUser();
+    $beforeMessagesCount = Message::count();
+
+    // Stub fixture
+    $expectedResponse = '{"message":"Message is queued for sending! Please check report for update","success":true,"message_id":"459949-1720166-22b8-0cf1-8214b1ca-d9"}';
+    $expectedResponseParsed = json_decode($expectedResponse, true);
+
+    // Stub the HTTP request to the SMS provider.
+    Http::fake([
+      'https://api.sms.to/sms/send' => Http::response($expectedResponseParsed, 200)
+    ]);
+
+    $data = [
+      'message' => 'Sms text message content. Visit Facebook to earn money.',
+      'to' => '+306999999',
+      'sender_id' => 'CorpSMS'
+    ];
+
+    $this->withoutExceptionHandling();
+    $response = $this->postJson($this->endpoint, $data);
+
+    $response->assertStatus(400);
+    $this->assertEquals($response->json(), [
+      "errors" => [
+        'Invalid phone number provided: +306999999'
+      ]
+    ]);
+
+    // Ensure no message has been created in database.
+    $afterMessagesCount = Message::count();
+    $this->assertEquals($afterMessagesCount, $beforeMessagesCount);
+  }
+
+  /**
+   * @test
+   */
   public function successfully_creates_and_sends_an_sms_message_by_stubbing_the_upstream_http_request_but_response_contains_errors(): void{
     // $this->markTestSkipped('Temporarilly skipped');
 
@@ -102,7 +140,7 @@ class SendSmsControllerTest extends TestCase{
 
     $data = [
       'message' => 'Sms text message content. Visit Facebook to earn money.',
-      'to' => '+446999666666',
+      'to' => '+306999999999',
       'sender_id' => 'CorpSMS'
     ];
 
@@ -145,7 +183,7 @@ class SendSmsControllerTest extends TestCase{
 
     $data = [
       'message' => 'Sms text message content. Visit Facebook to earn money.',
-      'to' => '+446999666666',
+      'to' => '+306999999999',
       'sender_id' => 'CorpSMS'
     ];
 
@@ -186,7 +224,7 @@ class SendSmsControllerTest extends TestCase{
 
     $data = [
       'message' => 'Sms text message content. Visit Facebook to earn money.',
-      'to' => '+446999666666',
+      'to' => '+306999999999',
       'sender_id' => 'CorpSMS'
     ];
 
@@ -196,7 +234,7 @@ class SendSmsControllerTest extends TestCase{
     $response->assertStatus(201);
     $this->assertEquals($response->json(), [
       'message' => 'Sms text message content. Visit to earn money.',
-      'phone_number' => '+446999666666',
+      'phone_number' => '+306999999999',
       'sender_id' => 'CorpSMS',
       'sms_provider_id' => '100',
       'message_status_id' => '250' // queued_in_sms_provider
@@ -241,7 +279,7 @@ class SendSmsControllerTest extends TestCase{
 
     $data = [
       'message' => 'Sms text message content. Visit Facebook to earn money.',
-      'to' => '+446999666666',
+      'to' => '+306999999999',
       'sender_id' => 'CorpSMS'
     ];
 
@@ -251,7 +289,7 @@ class SendSmsControllerTest extends TestCase{
     $response->assertStatus(201);
     $this->assertEquals($response->json(), [
       'message' => 'Sms text message content. Visit to earn money.',
-      'phone_number' => '+446999666666',
+      'phone_number' => '+306999999999',
       'sender_id' => 'CorpSMS',
       'sms_provider_id' => '100',
       'message_status_id' => '200' // queued_for_dispatch_to_the_sms_provider

@@ -9,14 +9,18 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use libphonenumber\PhoneNumberUtil;
+use libphonenumber\PhoneNumberFormat;
 
 class SendSmsController extends Controller{
   /**
    * Endpoint controller for `/api/send/sms`
    */
   public function dispatch(Request $request){
+    //
+    // Validate input data and fail fast.
+    //
     $messageData = $this->validateMessageParameters($request->json()->all());
-
     if(array_key_exists('errors', $messageData)){
       return $this->responseError($messageData['errors'], 400);
     }
@@ -68,15 +72,19 @@ class SendSmsController extends Controller{
 
     $validator = Validator::make($parameters, [
       'message' => 'required|string|max:255',
-      //
-      // TODO: Validate phone number here, or defer that to another layer.
-      //
       'to' => 'required|string|max:255',
       'sender_id' => 'required|string|max:255',
     ]);
 
     if ($validator->fails()) {
-      return ['errors' => $validator->errors()->messages()];
+      return [
+        'errors' => $validator->errors()->messages()
+      ];
+    }
+
+    $validatePhoneNumber = $this->validatePhoneNumber($parameters['to']);
+    if(array_key_exists('errors', $validatePhoneNumber)){
+      return $validatePhoneNumber;
     }
 
     $messageData = [
@@ -86,6 +94,44 @@ class SendSmsController extends Controller{
     ];
 
     return $messageData;
+  }
+
+  /**
+   * TODO: Move this to a helper library to be shared from multiple layers across the system.
+   *       Furthermore, apply fine grained error messages, according to country, format, etc.
+   */
+  private function validatePhoneNumber($phoneNumber): array{
+    try{
+      $phoneNumberValidator = PhoneNumberUtil::getInstance();
+      $numberProto = $phoneNumberValidator->parse($phoneNumber);
+
+      $valid = $phoneNumberValidator->isValidNumber($numberProto);
+      $formattedNumber = $phoneNumberValidator->format($numberProto, PhoneNumberFormat::E164);
+      $regionCode = $phoneNumberValidator->getRegionCodeForNumber($numberProto);
+
+      $errors = [];
+
+      if(
+        $valid === true &&
+        $formattedNumber === $phoneNumber &&
+        $regionCode === 'GR'
+      ){
+        return [];
+      }
+
+      return [
+        'errors' => [
+          "Invalid phone number provided: $formattedNumber"
+        ]
+      ];
+    }
+    catch (\libphonenumber\NumberParseException $e) {
+      return [
+        'errors' => [
+          'Invalid phone number provided'
+        ]
+      ];
+    }
   }
 
   private function responseData(MessageToSendStructType $message): array{
