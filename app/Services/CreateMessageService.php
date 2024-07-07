@@ -13,10 +13,15 @@ use Illuminate\Support\Facades\Config;
 
 /**
  * Bussiness logic for creating a message_content.
+ *
  * TODO:
- *   - Add phone number validation
+ *   - Phone number validation, occues on the API controller. We could re-appy
+ *     it here, as it's considered a strict business rule fore creating a message.
+ *
  *   - Extract here the sms provider per user validation from Message model.
- *   - Prevent creating a new message if the max limit per day is reached.
+ *
+ *   - Prevent creating a new message if the max limit per day is reached, or delay
+ *     the execution for the next day.
  */
 class CreateMessageService implements CreateMessageServiceInterface{
   private string $message_content;
@@ -44,7 +49,11 @@ class CreateMessageService implements CreateMessageServiceInterface{
   }
 
   /**
-   * Output Data
+   * Output Data.
+   *
+   * NOTE: We are not exposing the Message model here,
+   *       to prevent outer layers from modifying state,
+   *       as any output from this layer should be immutable.
    */
   public function message(): MessageToSendStructType{
     return new MessageToSendStruct(
@@ -58,7 +67,11 @@ class CreateMessageService implements CreateMessageServiceInterface{
   }
 
   /**
-   * Output Data
+   * Output Data.
+   *
+   * NOTE: We are not exposing the Message model here,
+   *       to prevent outer layers from modifying state,
+   *       as any output from this layer should be immutable.
    */
   public function smsProvider(): MessageToSendSmsProviderStructType{
     return new MessageToSendSmsProviderStruct(

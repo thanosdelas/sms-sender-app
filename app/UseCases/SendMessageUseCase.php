@@ -25,9 +25,10 @@ interface SendMessageUseCaseInterface{
 
 /**
  * Send Message Use Case.
+ *
  * Must be used from outer layers only, whenever an SMS message has to be sent.
- * Tightly couple on inner layers only, and has the reponsibilites to create a new
- * message, and dispatch an external API request to the SMS provider, to send it.
+ * Tightly coupled on inner layers only. Has the reponsibilites to create a new
+ * message, and dispatch it to an external API request to the SMS provider.
  */
 class SendMessageUseCase implements SendMessageUseCaseInterface{
   private MessageToSendStructType $message;
@@ -67,9 +68,10 @@ class SendMessageUseCase implements SendMessageUseCaseInterface{
   }
 
   /**
-   * Message output.
+   * Output Data.
+   *
    * Has to be reloaded to be updated with the current state,
-   * after dispatching operations in the servicses.
+   * after dispatching operations in the services layer.
    */
   public function messageOutputReloaded(): MessageToSendStructType{
     // Reload message
@@ -113,6 +115,11 @@ class SendMessageUseCase implements SendMessageUseCaseInterface{
     return false;
   }
 
+  /**
+   * NOTE: The decision to directly send the message to the SMS provider,
+   *       or push it to the internal queue, could have been delegated inside
+   *       a service, to avoid updating the message status state here.
+   */
   private function sendMessage(): bool{
     if(env('QUEUE_ENABLED') === true){
       return $this->sendMessageAsync();
@@ -145,9 +152,9 @@ class SendMessageUseCase implements SendMessageUseCaseInterface{
     $message->message_status_id = $status_id;
     $message->save();
 
-    $this->messageOutputReloaded();
+    $message = $this->messageOutputReloaded();
 
-    SendSMSMessageToProviderJob::dispatch($this->message, $this->smsProvider);
+    SendSMSMessageToProviderJob::dispatch($message, $this->smsProvider);
     return true;
   }
 }

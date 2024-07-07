@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Config;
 
 /**
  * Send an SMS message to the API of the SMS provider.
+ *
+ * TODO: Add support for throttling, and prevent sending if the
+ *       maximum limit amount has been reached per day, according to the
+ *       configuration in `sms_provider_user`. Probably cache an sms counter
+ *       on Redis for each user, which expires after 24 hours.
  */
 class SendMessageService{
   private array $responseMessage;
@@ -82,8 +87,8 @@ class SendMessageService{
       'message' => $this->message->data()['message'],
       'to' => $this->message->data()['phone_number'],
       'sender_id' => $this->message->data()['sender_id'],
-      'bypass_optout' => true, // Should be configured and loaded from the database or in the config.
-      'callback_url' => 'localhost:8000' // Should be configured and loaded from the database or in the config.
+      'bypass_optout' => true, // Should be configured and loaded from the database or from the config.
+      'callback_url' => 'localhost:8000' // Should be configured and loaded from the database or from the config.
     ]);
 
     return $this->parseResponse($response);
